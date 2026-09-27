@@ -1,0 +1,593 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Cart — ShopEase</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet"/>
+  <!-- Razorpay SDK -->
+  <script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0f0f;
+      --surface: #1a1a1a;
+      --border: #2a2a2a;
+      --accent: #e8c97e;
+      --accent2: #c9a84c;
+      --text: #f0ede8;
+      --muted: #888;
+      --error: #e57373;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      min-height: 100vh;
+    }
+
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 60px;
+      border-bottom: 1px solid var(--border);
+      position: sticky;
+      top: 0;
+      background: rgba(15,15,15,0.95);
+      backdrop-filter: blur(10px);
+      z-index: 100;
+    }
+
+    .brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      color: var(--accent);
+      text-decoration: none;
+    }
+
+    .nav-right { display: flex; align-items: center; gap: 24px; }
+
+    .nav-btn {
+      padding: 9px 20px;
+      border-radius: 6px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      text-decoration: none;
+      transition: all 0.2s;
+      border: none;
+    }
+
+    .nav-btn.back {
+      background: var(--surface);
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+    .nav-btn.back:hover { border-color: var(--accent); color: var(--accent); }
+
+    .nav-btn.logout { background: transparent; color: var(--muted); }
+    .nav-btn.logout:hover { color: var(--text); }
+
+    .page-header {
+      padding: 50px 60px 30px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .page-header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 38px;
+    }
+
+    .content {
+      display: grid;
+      grid-template-columns: 1fr 360px;
+      gap: 40px;
+      padding: 40px 60px;
+      align-items: start;
+    }
+
+    .cart-items { display: flex; flex-direction: column; gap: 16px; }
+
+    .cart-item {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      transition: border-color 0.2s;
+    }
+
+    .cart-item:hover { border-color: rgba(232,201,126,0.3); }
+
+    .item-icon {
+      width: 70px; height: 70px;
+      background: #222;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 28px;
+      flex-shrink: 0;
+    }
+
+    .item-info { flex: 1; }
+
+    .item-category {
+      font-size: 11px;
+      font-weight: 600;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 4px;
+    }
+
+    .item-name  { font-size: 16px; font-weight: 600; margin-bottom: 4px; }
+    .item-price { font-size: 14px; color: var(--muted); }
+
+    .qty-control { display: flex; align-items: center; gap: 12px; }
+
+    .qty-btn {
+      width: 32px; height: 32px;
+      border-radius: 6px;
+      border: 1px solid var(--border);
+      background: var(--bg);
+      color: var(--text);
+      font-size: 18px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s;
+    }
+
+    .qty-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .qty-num { font-size: 16px; font-weight: 600; min-width: 20px; text-align: center; }
+
+    .item-total {
+      font-size: 18px;
+      font-weight: 700;
+      color: var(--accent);
+      min-width: 100px;
+      text-align: right;
+    }
+
+    .remove-btn {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 18px;
+      padding: 4px;
+      transition: color 0.2s;
+    }
+
+    .remove-btn:hover { color: var(--error); }
+
+    /* Summary */
+    .summary {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 28px;
+      position: sticky;
+      top: 90px;
+    }
+
+    .summary h2 {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      margin-bottom: 24px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .summary-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      font-size: 15px;
+    }
+
+    .summary-row.total {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--accent);
+      margin-top: 20px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .summary-label { color: var(--muted); }
+
+    .checkout-btn {
+      width: 100%;
+      padding: 15px;
+      background: var(--accent);
+      color: #0f0f0f;
+      border: none;
+      border-radius: 8px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 24px;
+      transition: background 0.2s, transform 0.1s;
+    }
+
+    .checkout-btn:hover    { background: var(--accent2); }
+    .checkout-btn:active   { transform: scale(0.98); }
+    .checkout-btn:disabled { background: #333; color: var(--muted); cursor: not-allowed; }
+
+    .empty-cart {
+      text-align: center;
+      padding: 100px 40px;
+      color: var(--muted);
+    }
+
+    .empty-cart .icon { font-size: 64px; margin-bottom: 20px; }
+    .empty-cart h2    { font-size: 22px; color: var(--text); margin-bottom: 8px; }
+    .empty-cart a {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 28px;
+      background: var(--accent);
+      color: #0f0f0f;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    .loading { text-align: center; padding: 80px; color: var(--muted); }
+
+    .toast {
+      position: fixed;
+      bottom: 30px; right: 30px;
+      background: #1a1a1a;
+      border: 1px solid var(--accent);
+      color: var(--text);
+      padding: 14px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      opacity: 0;
+      transform: translateY(10px);
+      transition: all 0.3s;
+      z-index: 999;
+    }
+
+    .toast.show { opacity: 1; transform: translateY(0); }
+
+    .msg {
+      margin-top: 12px;
+      font-size: 13px;
+      padding: 10px;
+      border-radius: 6px;
+      display: none;
+      text-align: center;
+    }
+
+    .msg.success { background: rgba(129,199,132,0.15); color: #81c784; display: block; }
+    .msg.error   { background: rgba(229,115,115,0.15); color: var(--error); display: block; }
+
+    @media (max-width: 900px) {
+      .content { grid-template-columns: 1fr; }
+      nav, .page-header, .content { padding-left: 20px; padding-right: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+  <nav>
+    <a class="brand" href="products.html">ShopEase</a>
+    <div class="nav-right">
+      <a class="nav-btn back" href="orders.html">📦 My Orders</a>
+      <a class="nav-btn back" href="products.html">← Products</a>
+      <button class="nav-btn logout" onclick="logout()">Logout</button>
+    </div>
+  </nav>
+
+  <div class="page-header">
+    <h1>Your Cart</h1>
+  </div>
+
+  <div id="main-content">
+    <div class="loading">Loading cart...</div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script src="js/config.js"></script>
+  <script>
+    const token = localStorage.getItem('token');
+    const user  = JSON.parse(localStorage.getItem('user') || '{}');
+    if (!token) window.location.href = 'login.html';
+
+    const ICONS = {
+      'Mobiles': '📱', 'Laptops': '💻', 'Electronics': '🔌',
+      "Men's Clothing": '👕', "Women's Clothing": '👗', 'default': '🛍️'
+    };
+
+    let cartItems = [];
+
+    // ── Load cart from backend ───────────────────────────────
+    async function loadCart() {
+      try {
+        const res = await fetch(`${API}/cart`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        if (res.status === 401) { window.location.href = 'login.html'; return; }
+
+        const data = await fetch(`${API}/cart`, {
+          headers: { 'Authorization': `Bearer ${token}` }
+        }).then(r => r.json());
+
+        cartItems = data.items;
+        render();
+
+      } catch {
+        document.getElementById('main-content').innerHTML =
+          '<div class="loading">Failed to load cart.</div>';
+      }
+    }
+
+    // ── Render cart ──────────────────────────────────────────
+    function render() {
+      const main = document.getElementById('main-content');
+
+      if (!cartItems || cartItems.length === 0) {
+        main.innerHTML = `
+          <div class="empty-cart">
+            <div class="icon">🛒</div>
+            <h2>Your cart is empty</h2>
+            <p>Add some products to get started</p>
+            <a href="products.html">Browse Products</a>
+          </div>`;
+        return;
+      }
+
+      const subtotal = cartItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      const shipping = subtotal > 999 ? 0 : 99;
+      const total    = subtotal + shipping;
+
+      main.innerHTML = `
+        <div class="content">
+          <div class="cart-items">
+            ${cartItems.map(item => `
+              <div class="cart-item">
+                <div class="item-icon">${ICONS[item.category_name] || ICONS.default}</div>
+                <div class="item-info">
+                  <div class="item-category">${item.category_name || ''}</div>
+                  <div class="item-name">${item.name}</div>
+                  <div class="item-price">₹${Number(item.price).toLocaleString('en-IN')} each</div>
+                </div>
+                <div class="qty-control">
+                  <button class="qty-btn" onclick="updateQty(${item.cart_item_id}, ${item.quantity - 1})">−</button>
+                  <span class="qty-num">${item.quantity}</span>
+                  <button class="qty-btn" onclick="updateQty(${item.cart_item_id}, ${item.quantity + 1})">+</button>
+                </div>
+                <div class="item-total">₹${(item.price * item.quantity).toLocaleString('en-IN')}</div>
+                <button class="remove-btn" onclick="removeItem(${item.cart_item_id})" title="Remove">✕</button>
+              </div>
+            `).join('')}
+          </div>
+
+          <div class="summary">
+            <h2>Order Summary</h2>
+            <div class="summary-row">
+              <span class="summary-label">Subtotal</span>
+              <span>₹${subtotal.toLocaleString('en-IN')}</span>
+            </div>
+            <div class="summary-row">
+              <span class="summary-label">Shipping</span>
+              <span>${shipping === 0 ? 'Free' : '₹' + shipping}</span>
+            </div>
+            ${shipping > 0 ? `
+              <div class="summary-row">
+                <span class="summary-label" style="color:#81c784;font-size:12px">
+                  Add ₹${(1000 - subtotal).toLocaleString('en-IN')} more for free shipping
+                </span>
+              </div>` : ''
+            }
+            <div class="summary-row total">
+              <span>Total</span>
+              <span>₹${total.toLocaleString('en-IN')}</span>
+            </div>
+            <button class="checkout-btn" id="checkout-btn" onclick="checkout()">
+              Proceed to Payment
+            </button>
+            <div class="msg" id="checkout-msg"></div>
+          </div>
+        </div>`;
+    }
+
+    // ── Update quantity ──────────────────────────────────────
+    async function updateQty(cartItemId, newQty) {
+      if (newQty <= 0) { removeItem(cartItemId); return; }
+
+      try {
+        await fetch(`${API}/cart/update`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ cart_item_id: cartItemId, quantity: newQty })
+        });
+
+        const item = cartItems.find(i => i.cart_item_id === cartItemId);
+        if (item) item.quantity = newQty;
+        render();
+
+      } catch { showToast('Update failed.'); }
+    }
+
+    // ── Remove item ──────────────────────────────────────────
+    async function removeItem(cartItemId) {
+      try {
+        await fetch(`${API}/cart/remove/${cartItemId}`, {
+          method: 'DELETE',
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+
+        cartItems = cartItems.filter(i => i.cart_item_id !== cartItemId);
+        render();
+        showToast('Item removed.');
+
+      } catch { showToast('Remove failed.'); }
+    }
+
+    // ── Step 1: Place order then immediately open payment ────
+    async function checkout() {
+      const btn = document.getElementById('checkout-btn');
+      const msg = document.getElementById('checkout-msg');
+      btn.disabled    = true;
+      btn.textContent = 'Placing order...';
+      msg.className   = 'msg';
+
+      try {
+        // Create the order first
+        const orderRes  = await fetch(`${API}/orders/checkout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        const orderData = await orderRes.json();
+
+        if (!orderRes.ok) {
+          msg.className   = 'msg error';
+          msg.textContent = orderData.error || 'Checkout failed.';
+          btn.disabled    = false;
+          btn.textContent = 'Proceed to Payment';
+          return;
+        }
+
+        // Immediately create Razorpay payment session
+        btn.textContent = 'Opening payment...';
+        const payRes  = await fetch(`${API}/payments/create`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({ order_id: orderData.orderId })
+        });
+        const payData = await payRes.json();
+
+        if (!payRes.ok) {
+          msg.className   = 'msg error';
+          msg.textContent = payData.error || 'Could not initiate payment.';
+          btn.disabled    = false;
+          btn.textContent = 'Proceed to Payment';
+          return;
+        }
+
+        // ── Step 2: Open Razorpay popup ──────────────────────
+        const options = {
+          key:         payData.key_id,
+          amount:      payData.amount,
+          currency:    payData.currency,
+          name:        'ShopEase',
+          description: `Order #${orderData.orderId}`,
+          order_id:    payData.razorpay_order_id,
+
+          handler: async function(response) {
+            btn.textContent = 'Verifying payment...';
+            await verifyPayment(
+              orderData.orderId,
+              response.razorpay_order_id,
+              response.razorpay_payment_id,
+              response.razorpay_signature
+            );
+          },
+
+          prefill: {
+            name:  user.name  || '',
+            email: user.email || ''
+          },
+
+          theme: { color: '#e8c97e' },
+
+          modal: {
+            ondismiss: function() {
+              // User closed popup — order exists but is unpaid
+              // It will NOT appear in My Orders until paid
+              msg.className   = 'msg error';
+              msg.textContent = 'Payment cancelled. Your order was not confirmed.';
+              btn.disabled    = false;
+              btn.textContent = 'Proceed to Payment';
+            }
+          }
+        };
+
+        const rzp = new Razorpay(options);
+        rzp.open();
+
+      } catch (e) {
+        msg.className   = 'msg error';
+        msg.textContent = 'Connection error.';
+        btn.disabled    = false;
+        btn.textContent = 'Proceed to Payment';
+      }
+    }
+
+    // ── Step 3: Verify payment ───────────────────────────────
+    async function verifyPayment(orderId, razorpay_order_id, razorpay_payment_id, razorpay_signature) {
+      try {
+        const res = await fetch(`${API}/payments/verify`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            razorpay_order_id,
+            razorpay_payment_id,
+            razorpay_signature
+          })
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+          cartItems = [];
+          showToast('🎉 Payment successful! Order confirmed.');
+          setTimeout(() => window.location.href = 'orders.html', 1800);
+        } else {
+          const msg       = document.getElementById('checkout-msg');
+          msg.className   = 'msg error';
+          msg.textContent = data.error || 'Payment verification failed. Contact support.';
+        }
+
+      } catch (e) {
+        const msg       = document.getElementById('checkout-msg');
+        msg.className   = 'msg error';
+        msg.textContent = 'Verification error. Please contact support.';
+      }
+    }
+
+    // ── Helpers ──────────────────────────────────────────────
+    function showToast(message) {
+      const t = document.getElementById('toast');
+      t.textContent = message;
+      t.classList.add('show');
+      setTimeout(() => t.classList.remove('show'), 2500);
+    }
+
+    function logout() {
+      localStorage.clear();
+      window.location.href = 'login.html';
+    }
+
+    loadCart();
+  </script>
+</body>
+</html>
